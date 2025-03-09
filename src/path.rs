@@ -667,7 +667,7 @@ fn make_base_directory(xdg_var: &wstr, non_xdg_homepath: &wstr) -> BaseDirectory
     let mut remoteness = DirRemoteness::unknown;
     if path.is_empty() {
         err = ENOENT;
-    } else if let Err(io_error) = std::fs::create_dir_all(wcs2osstring(&path)) {
+    } else if let Err(io_error) = create_dir_all_with_mode(wcs2osstring(&path), 0o700) {
         err = io_error.raw_os_error().unwrap_or_default();
     } else {
         err = 0;
@@ -685,6 +685,15 @@ fn make_base_directory(xdg_var: &wstr, non_xdg_homepath: &wstr) -> BaseDirectory
     }
 }
 
+// Like std::fs::create_dir_all, but new directories are created using the given mode (e.g. 0o700).
+fn create_dir_all_with_mode<P: AsRef<std::path::Path>>(path: P, mode: u32) -> std::io::Result<()> {
+    use std::os::unix::fs::DirBuilderExt;
+    std::fs::DirBuilder::new()
+        .recursive(true)
+        .mode(mode)
+        .create(path.as_ref())
+}
+
 /// Return whether the given path is on a remote filesystem.
 fn path_remoteness(path: &wstr) -> DirRemoteness {
     let narrow = wcs2zstring(path);
@@ -698,7 +707,7 @@ fn path_remoteness(path: &wstr) -> DirRemoteness {
         // these are in varying headers. Simply hard code them.
         // Note that we treat FUSE filesystems as remote, which means we lock less on such filesystems.
         // NOTE: The cast is necessary for 32-bit systems because of the 4-byte CIFS_MAGIC_NUMBER
-        match usize::try_from(buf.f_type).unwrap() {
+        match buf.f_type as usize  {
             0x5346414F | // AFS_SUPER_MAGIC - Andrew File System
             0x6B414653 | // AFS_FS_MAGIC - Kernel AFS and AuriStorFS
             0x73757245 | // CODA_SUPER_MAGIC - Coda File System

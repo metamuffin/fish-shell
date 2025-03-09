@@ -22,6 +22,8 @@ send, sendline, sleep, expect_prompt, expect_re, expect_str = (
 )
 expect_prompt()
 
+sendline("bind ctrl-l repaint")
+expect_prompt()
 # Clear twice (regression test for #7280).
 send("\f")
 expect_prompt(increment=False)
@@ -241,6 +243,18 @@ expect_prompt("foo")
 # send("hh~~bbve~\r")
 # expect_prompt("\r\n.*SOME TeXT\r\n", unmatched="Couldn't find expected output 'SOME TeXT")
 
+send("echo echo")
+send("\033")
+sleep(0.200)
+send("bgU\r")
+expect_prompt("echo ECHO")
+
+send("echo 125")
+send("\033")
+sleep(0.200)
+send("0$i34\r")
+expect_prompt("echo 12345")
+
 # Now test that exactly the expected bind modes are defined
 sendline("bind --list-modes")
 expect_prompt(
@@ -350,15 +364,24 @@ expect_prompt("\n.*b c d")
 # Check that ctrl-z can be bound
 sendline('bind ctrl-z "echo bound ctrl-z"')
 expect_prompt()
-send("\x1A")
+send("\x1a")
 expect_str("bound ctrl-z")
 
-send('echo foobar')
-send('\x02\x02\x02') # ctrl-b, backward-char
-sendline('\x1bu') # alt+u, upcase word
+send("echo foobar")
+send("\x02\x02\x02")  # ctrl-b, backward-char
+sendline("\x1bu")  # alt+u, upcase word
 expect_prompt("fooBAR")
 
-sendline("""
+sendline("bind ctrl-z history-prefix-search-backward")
+expect_prompt()
+sendline("echo this continues")
+expect_prompt()
+send("\x1a")
+sendline(" with this text")
+expect_prompt("this continues with this text")
+
+sendline(
+    """
     bind ctrl-g "
         commandline --insert 'echo foo ar'
         commandline -f backward-word
@@ -367,9 +390,11 @@ sendline("""
         commandline -f backward-char
         commandline -f delete-char
     "
-""".strip())
-send('\x07') # ctrl-g
-send('\r')
+""".strip()
+)
+expect_prompt()
+send("\x07")  # ctrl-g
+send("\r")
 expect_prompt("foobar")
 
 # This should do nothing instead of crash
@@ -384,7 +409,7 @@ expect_prompt()
 # (for obvious reasons this MUST BE LAST)
 sendline("function myexit; echo exit; exit; end; bind ctrl-z myexit")
 expect_prompt()
-send("\x1A")
+send("\x1a")
 expect_str("exit")
 
 for t in range(0, 50):

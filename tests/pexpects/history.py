@@ -98,8 +98,8 @@ expect_prompt("echo start1; builtin history; echo end1\r\n")
 # ==========
 # Delete a single command we recently ran.
 sendline("history delete -e -C 'echo hello'")
-expect_prompt("history delete -e -C 'echo hello'\r\n")
-sendline("echo count hello (history search -e -C 'echo hello' | wc -l | string trim)")
+expect_prompt()
+sendline("echo count hello (history search -e -C 'echo hello' | count)")
 expect_prompt("count hello 0\r\n")
 
 # ==========
@@ -119,18 +119,14 @@ expect_prompt('Deleting history entry 1: "echo hello AGAIN"\r\n')
 
 # Verify that the deleted history entry is gone and the other one that matched
 # the prefix search above is still there.
-sendline(
-    "echo count AGAIN (history search -e -C 'echo hello AGAIN' | wc -l | string trim)"
-)
+sendline("echo count AGAIN (history search -e -C 'echo hello AGAIN' | count)")
 expect_prompt("count AGAIN 0\r\n")
 
-sendline(
-    "echo count again (history search -e -C 'echo hello again' | wc -l | string trim)"
-)
+sendline("echo count again (history search -e -C 'echo hello again' | count)")
 expect_prompt("count again 1\r\n")
 
 # Verify that the $history var has the expected content.
-sendline("echo history2=$history\[2\]")
+sendline("echo history2=$history[2]")
 expect_prompt("history2=echo count AGAIN .*\r\n")
 
 # Verify that history search is case-insensitive by default
@@ -181,7 +177,9 @@ expect_prompt("\r\n")
 
 # Check history filtering
 # We store anything that starts with "echo ephemeral".
-sendline("function fish_should_add_to_history; string match -q 'echo ephemeral*' -- $argv; and return 2; return 0; end")
+sendline(
+    "function fish_should_add_to_history; string match -q 'echo ephemeral*' -- $argv; and return 2; return 0; end"
+)
 expect_prompt("")
 # Check that matching the line works
 # (fish_should_add_to_history is itself stored in history so we match "ephemeral!" to avoid it)
